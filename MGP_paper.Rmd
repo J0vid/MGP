@@ -2544,13 +2544,18 @@ process.scores <- (full.pred) %*% tmp.pca$rotation
     proc.score[k,3] <-  tmp.proc.score[2] + (tmp.proc.score[2] - do.mean.proj[2]) * mag
 proc.score[k,2] <- tmp.proc.score[1] + (tmp.proc.score[1] - do.mean.proj[1]) * mag
 proc.score[k,1] <- process.name
+
+if(k == 2 | k == 4){#flip these two vectors to point towards mutants
+   proc.score[k,3] <-  tmp.proc.score[2] + (tmp.proc.score[2] - do.mean.proj[2]) * -(mag+1)
+proc.score[k,2] <- tmp.proc.score[1] + (tmp.proc.score[1] - do.mean.proj[1]) * -(mag+1)
+}
     
    # points(process.scores[,1], process.scores[,2], col = k)
 }#end k
 
   
   #try it in ggplot
-  mutant.mean.df <- data.frame(mutant = c(as.character(unique(mutant.dbfin$Genotype)), "DO"), scores = rbind(mutant.mean.pc, do.mean.proj[1:2]))
+  mutant.mean.df <- data.frame(mutant = c(as.character(unique(mutant.dbfin$Genotype)), "DO mean"), scores = rbind(mutant.mean.pc, do.mean.proj[1:2]))
 mutant.mean.df[,1] <- as.character(mutant.mean.df[,1])
 colnames(mutant.mean.df) <- NULL
 mutant.mean.df <- data.frame(mutant = c(mutant.mean.df[,1], proc.score[,1]), scores = rbind(as.matrix(mutant.mean.df[,-1]), cbind(as.numeric(proc.score[,2]), as.numeric(proc.score[,3]))), Effect = c(rep("Mutant", 30), rep("Genomic", 8)))
@@ -2586,7 +2591,7 @@ colnames(proc.score) <- c("process", "score1", "score2")
   
   
   
-  ggplot(mutant.mean.df, aes(x = scores.1, y = scores.2, label = mutant)) +
+  ggplot(mutant.mean.df, aes(x = scores.1, y = scores.2, label = mutant, color = Effect)) +
 geom_point(colour = 1, size = .75) +
 xlab("PC1 (11.2% var)") +
 ylab("PC2 (3.9% var)") +
@@ -2597,7 +2602,8 @@ geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(pro
 geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[5,2]), yend = as.numeric(proc.score[5,3])), size = .4) +
 geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[6,2]), yend = as.numeric(proc.score[6,3])), size = .4) +
 geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[7,2]), yend = as.numeric(proc.score[7,3])), size = .4) +
-ggrepel::geom_text_repel(segment.alpha = .2, size = 2.25, max.iter = 5000) +
+ggrepel::geom_text_repel(segment.alpha = .2, size = 2.5, max.iter = 5000) +
+scale_color_manual(values=c("#E69F00", "black")) +    
 theme_bw()
   
   
