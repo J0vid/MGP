@@ -2247,6 +2247,12 @@ no.mutant <- unique(mutant.db$Genotype)[c(6,11:12,15:21,24,25:27,30,33,35:36,38:
 mutant.db2 <- mutant.db[mutant.db$Genotype %in% no.mutant == F,]
 mutant.lms2 <- mutant.lms[mutant.db$Genotype %in% no.mutant == F,]
 
+mutant.db2 <- mutant.db[mutant.db$Genotype %in% no.mutant == F,]
+mutant.lms2 <- mutant.lms[mutant.db$Genotype %in% no.mutant == F,]
+
+mutant.lmsfin <- mutant.lms2[mutant.db2$Control == "No",]
+mutant.dbfin <- mutant.db2[mutant.db2$Control == "No",]
+
 #move forward with reduced mutant dataset
 tmp.mutant.registration <- gpagen(arrayspecs(rbind(Y, as.matrix(mutant.lms2)), 54, 3))$coords
   tmp.mutant.mean <- gpagen(arrayspecs(rbind(Y, as.matrix(mutant.lms2)), 54, 3))$consensus
@@ -2392,8 +2398,8 @@ points(tmp.Y %*% tmp.pca$rotation, col = adjustcolor("slategrey", alpha.f = .1))
 ```{r process mutant morphospace}
 
 
-  tmp.mutant.registration <- gpagen(arrayspecs(rbind(Y, as.matrix(mutant.lms[])), 54, 3))$coords
-  tmp.mutant.mean <- gpagen(arrayspecs(rbind(Y, as.matrix(mutant.lms[])), 54, 3))$consensus
+  tmp.mutant.registration <- gpagen(arrayspecs(rbind(Y, as.matrix(mutant.lmsfin[])), 54, 3))$coords
+  tmp.mutant.mean <- gpagen(arrayspecs(rbind(Y, as.matrix(mutant.lmsfin)), 54, 3))$consensus
   
 
   mutant.2d <- two.d.array(tmp.mutant.registration[,,-(1:nrow(Y))])
@@ -2411,11 +2417,16 @@ points(tmp.Y %*% tmp.pca$rotation, col = adjustcolor("slategrey", alpha.f = .1))
   plot(tmp.pca$x, typ = "n", xlim = c(-.05, .1), ylim = c(-.03, .03))
   #mutant mean labels
   
-  # for(i in (1:length(unique(mutant.db$Genotype)))[-c(24,grep(unique(mutant.db$Genotype), pattern = "wt"))]){
-  for(i in c(1:5,7:10,13:14,22:23,28:29,34,36:37,41:44,46:48,50:52,63:65)){
-    mutant <- unique(mutant.db$Genotype)[i]
-  mmean.score <- colMeans(mutant.scores[mutant.db$Genotype == mutant,])
+  
+  mutant.mean.pc <- matrix(NA, nrow = length(unique(mutant.dbfin$Genotype)), ncol = 2)
+  # for(i in c(1:5,7:10,13:14,22:23,28:29,34,36:37,41:44,46:48,50:52,63:65)){
+   for(i in (1:length(unique(mutant.dbfin$Genotype)))){
+    mutant <- unique(mutant.dbfin$Genotype)[i]
+  mmean.score <- colMeans(mutant.scores[mutant.dbfin$Genotype == mutant,])
   text(mmean.score[1], mmean.score[2], labels = mutant, col = 2, cex = .7)
+  mutant.mean.pc[i,2] <- mmean.score[2]
+mutant.mean.pc[i,1] <- mmean.score[1]
+
   }
   
   # text(process.scores[1], process.scores[2], labels = process.name, col = 4, cex = .7)
@@ -2423,10 +2434,11 @@ points(tmp.Y %*% tmp.pca$rotation, col = adjustcolor("slategrey", alpha.f = .1))
    # points(process.scores, col = 3)
   points(tmp.Y %*% tmp.pca$rotation, col = adjustcolor("slategrey", alpha.f = .1))
   
+  proc.score <- matrix(NA, nrow = 7, ncol = 3)
   
-for(k in c(1:10)){
+for(k in c(1:7)){
   tryCatch({
-    process.name <- c("mesodermal cell fate specification", "execution phase of apoptosis", "endochondral ossification", "bmp signaling pathway", "cranial suture morphogenesis", "wnt signaling pathway", "intraciliary transport", "neurotransmitter transport")[k]
+    process.name <- c("execution phase of apoptosis", "endochondral ossification", "bmp signaling pathway", "cranial suture morphogenesis", "wnt signaling pathway", "intraciliary transport", "neurotransmitter transport")[k]
   # process.ano <- as.character(unique(DO.go[,2])[sample(1:length(unique(DO.go[,3])), size = 1)])
   process.ano <- as.character(DO.go[DO.go[,3] == process.name,2])
     # process.name <- as.character(unique(DO.go[,3])[unique(DO.go[,2]) == process.ano])
@@ -2528,9 +2540,69 @@ process.scores <- (full.pred) %*% tmp.pca$rotation
   arrows(x0 = do.mean.proj[1], y0 = do.mean.proj[2], x1 = tmp.proc.score[1] + (tmp.proc.score[1] - do.mean.proj[1]) * mag, y1 = tmp.proc.score[2] + (tmp.proc.score[2] - do.mean.proj[2]) * mag, length = .05)
       
     text(tmp.proc.score[1] + (tmp.proc.score[1] - do.mean.proj[1]) * mag, tmp.proc.score[2] + (tmp.proc.score[2] - do.mean.proj[2]) * mag, labels = process.name, col = 4, cex = .7)
+    
+    proc.score[k,3] <-  tmp.proc.score[2] + (tmp.proc.score[2] - do.mean.proj[2]) * mag
+proc.score[k,2] <- tmp.proc.score[1] + (tmp.proc.score[1] - do.mean.proj[1]) * mag
+proc.score[k,1] <- process.name
+    
    # points(process.scores[,1], process.scores[,2], col = k)
 }#end k
 
+  
+  #try it in ggplot
+  mutant.mean.df <- data.frame(mutant = c(as.character(unique(mutant.dbfin$Genotype)), "DO"), scores = rbind(mutant.mean.pc, do.mean.proj[1:2]))
+mutant.mean.df[,1] <- as.character(mutant.mean.df[,1])
+colnames(mutant.mean.df) <- NULL
+mutant.mean.df <- data.frame(mutant = c(mutant.mean.df[,1], proc.score[,1]), scores = rbind(as.matrix(mutant.mean.df[,-1]), cbind(as.numeric(proc.score[,2]), as.numeric(proc.score[,3]))), Effect = c(rep("Mutant", 30), rep("Genomic", 8)))
+mutant.mean.df[,1] <- as.character(mutant.mean.df[,1])
+mutant.mean.df[5,1] <- "B9D1"
+mutant.mean.df[7,1] <- "Bmp2_7"
+mutant.mean.df[9,1] <- "Bmp7 cond"
+mutant.mean.df[10,1] <- "Crf4"
+mutant.mean.df[11,1] <- "Disp"
+mutant.mean.df[12,1] <- "Fgf10"
+mutant.mean.df[13,1] <- "Fgf3"
+mutant.mean.df[14,1] <- "Ghrhr"
+mutant.mean.df[16,1] <- "Grm1 cond"
+mutant.mean.df[17,1] <- "Hhat"
+mutant.mean.df[18,1] <- "Ift88"
+mutant.mean.df[19,1] <- "" #Lrp2
+mutant.mean.df[20,1] <- "Mceph"
+mutant.mean.df[22,1] <- "Nipbl"
+mutant.mean.df[24,1] <- "Nosip hom"
+mutant.mean.df[25,1] <- "" #Nosip het
+mutant.mean.df[26,1] <- "Papps2"
+mutant.mean.df[27,1] <- "Pten het"
+mutant.mean.df[28,1] <- "Pten hom"
+mutant.mean.df[29,1] <- "Shh"
+mutant.mean.df[8,1] <- "" #Bmp7
+mutant.mean.df[,2] <- as.numeric(mutant.mean.df[,2])
+mutant.mean.df[,3] <- as.numeric(mutant.mean.df[,3])
+#maybe color by type of mutant or pathway, or mutant vs genomic estimate
+colnames(proc.score) <- c("process", "score1", "score2")
+  
+  
+  
+  
+  
+  
+  ggplot(mutant.mean.df, aes(x = scores.1, y = scores.2, label = mutant)) +
+geom_point(colour = 1, size = .75) +
+xlab("PC1 (11.2% var)") +
+ylab("PC2 (3.9% var)") +
+geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[1,2]), yend = as.numeric(proc.score[1,3])), size = .4) +
+geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[2,2]), yend = as.numeric(proc.score[2,3])), size = .4) +
+geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[3,2]), yend = as.numeric(proc.score[3,3])), size = .4) +
+geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[4,2]), yend = as.numeric(proc.score[4,3])), size = .4) +
+geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[5,2]), yend = as.numeric(proc.score[5,3])), size = .4) +
+geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[6,2]), yend = as.numeric(proc.score[6,3])), size = .4) +
+geom_segment(aes(x = do.mean.proj[1], y = do.mean.proj[2], xend = as.numeric(proc.score[7,2]), yend = as.numeric(proc.score[7,3])), size = .4) +
+ggrepel::geom_text_repel(segment.alpha = .2, size = 2.25, max.iter = 5000) +
+theme_bw()
+  
+  
+  
+  
 
 ```
 
